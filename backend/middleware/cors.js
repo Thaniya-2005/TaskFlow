@@ -10,14 +10,9 @@ const DEFAULT_ALLOWED_ORIGINS = [
 ];
 
 export function corsMiddleware(req, res, next) {
-  const configuredOrigins = process.env.CORS_ORIGIN
-    ? process.env.CORS_ORIGIN.split(",").map((origin) => origin.trim())
-    : DEFAULT_ALLOWED_ORIGINS;
   const requestOrigin = req.headers.origin;
-
-  if (requestOrigin && configuredOrigins.includes(requestOrigin)) {
-    res.setHeader("Access-Control-Allow-Origin", requestOrigin);
-  }
+  // Always allow the requesting origin, or default to *
+  res.setHeader("Access-Control-Allow-Origin", requestOrigin || "*");
 
   res.setHeader("Vary", "Origin");
   res.setHeader("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
