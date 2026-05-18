@@ -1,0 +1,16 @@
+{
+  "name": "taskflow-assignment",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Full-stack task tracking assignment with React, Vite, Node.js, and Express.",
+  "scripts": {
+    "dev": "npm run dev --prefix backend",
+    "dev:backend": "npm run dev --prefix backend",
+    "dev:frontend": "npm run dev --prefix frontend",
+    "test": "npm run test --prefix backend"
+  },
+  "workspaces": [
+    "backend",
+    "frontend"
+  ]
+}
