@@ -5,3 +5,4 @@ dist/
 .env.*.local
 npm-debug.log*
 intern_task_for_ai_full_stack__backend.pdf
+.codex/*.log

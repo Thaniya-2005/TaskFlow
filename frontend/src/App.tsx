@@ -66,13 +66,15 @@ export default function App() {
     }
 
     setIsCompletionRoute(true);
-    const taskId = pathMatch[1];
+    const taskId = decodeURIComponent(pathMatch[1]);
     const params = new URLSearchParams(window.location.search);
     const token = params.get("token");
     setCompletionToken(token);
 
-    // Clean URL without reload
-    window.history.replaceState(null, "", "/");
+    if (!token) {
+      setCompletionTask("expired");
+      return;
+    }
 
     // Fetch task directly from backend — never rely on local state
     fetchTaskById(taskId)
@@ -163,15 +165,20 @@ export default function App() {
   async function handleCompleteFromLink() {
     if (!completionTask || typeof completionTask !== "object") return;
     if (!completionToken) {
-      toast.error("No access token found in the link.");
+      setCompletionTask("expired");
+      toast.error("This completion link is missing its access token.");
       return;
     }
     setIsCompletingFromLink(true);
     try {
       await completeTask(completionTask.id, completionToken);
       setCompletionTask("done");
+      window.history.replaceState(null, "", "/");
       toast.success("Task marked as complete!");
     } catch (err: any) {
+      if (err.message?.toLowerCase().includes("token")) {
+        setCompletionTask("expired");
+      }
       toast.error(`Error: ${err.message}`);
     } finally {
       setIsCompletingFromLink(false);
@@ -233,6 +240,15 @@ export default function App() {
               <h2 className="text-xl font-black text-slate-800 dark:text-slate-100 mb-2">Task Overdue</h2>
               <p className="text-slate-500 dark:text-slate-400 text-sm">The deadline for this task has passed and it can no longer be completed.</p>
               <a href="/" className="mt-6 inline-block px-5 py-2.5 rounded-xl bg-orange-600 text-white font-bold text-sm hover:bg-orange-700 transition-colors">Go to Dashboard</a>
+            </div>
+          )}
+
+          {completionTask === "expired" && (
+            <div className="p-10 rounded-3xl bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-red-300 dark:border-red-700 shadow-2xl text-center">
+              <AlertTriangle size={48} className="text-red-500 mx-auto mb-4" />
+              <h2 className="text-xl font-black text-slate-800 dark:text-slate-100 mb-2">Link Not Valid</h2>
+              <p className="text-slate-500 dark:text-slate-400 text-sm">This completion link is missing, expired, or has already been used.</p>
+              <a href="/" className="mt-6 inline-block px-5 py-2.5 rounded-xl bg-red-600 text-white font-bold text-sm hover:bg-red-700 transition-colors">Go to Dashboard</a>
             </div>
           )}
 

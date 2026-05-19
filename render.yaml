@@ -9,6 +9,8 @@ services:
     envVars:
       - key: CORS_ORIGIN
         sync: false
+      - key: FRONTEND_URL
+        sync: false
       - key: WORKER_DELAY_MS
         value: 12000
       - key: DEADLINE_CHECK_INTERVAL_MS
