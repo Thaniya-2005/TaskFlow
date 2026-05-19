@@ -69,8 +69,10 @@ FRONTEND_URL=http://localhost:5173
 WORKER_DELAY_MS=12000
 DEADLINE_CHECK_INTERVAL_MS=5000
 RESEND_API_KEY=re_your_api_key_here
-FROM_EMAIL=TaskFlow <onboarding@resend.dev>
+FROM_EMAIL=TaskFlow <noreply@your-verified-domain.com>
 ```
+
+`onboarding@resend.dev` is only for testing and can only send to the email address on the Resend account. To send assignments to any user, verify a domain in Resend and use an address from that domain in `FROM_EMAIL`.
 
 Frontend variables, stored in `frontend/.env` locally or static-site environment settings:
 

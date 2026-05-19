@@ -20,6 +20,12 @@ export const sendTaskAssignmentEmail = async (task, assigneeEmail) => {
     throw new Error('Email service not configured (RESEND_API_KEY missing).');
   }
 
+  if (isProductionRuntime && FROM_EMAIL.includes('@resend.dev')) {
+    throw new Error(
+      'Resend production email requires a verified domain. Set FROM_EMAIL to an address on your verified domain, such as TaskFlow <noreply@yourdomain.com>.'
+    );
+  }
+
   const assignee = typeof assigneeEmail === 'string' ? assigneeEmail.trim() : '';
   if (!isValidEmail(assignee)) {
     throw new Error(`Invalid assignee email address: ${assigneeEmail || '<empty>'}`);
