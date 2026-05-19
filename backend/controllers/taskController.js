@@ -43,8 +43,7 @@ export function assignTask({ taskService, taskWorker }) {
       } catch (error) {
         console.error("[TaskController] Assignment email failed:", error);
         emailSent = false;
-        emailError =
-          "Task assigned, but email could not be sent. Check SMTP settings and the recipient address.";
+        emailError = error.message || "Task assigned, but email could not be sent.";
       }
 
       taskWorker.start(task.id);

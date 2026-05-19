@@ -15,6 +15,16 @@ services:
         value: 12000
       - key: DEADLINE_CHECK_INTERVAL_MS
         value: 5000
+      - key: SMTP_HOST
+        sync: false
+      - key: SMTP_PORT
+        sync: false
+      - key: SMTP_SECURE
+        sync: false
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASS
+        sync: false
 
   - type: static
     name: taskflow-frontend

@@ -192,10 +192,11 @@ export const sendTaskAssignmentEmail = async (task, assigneeEmail) => {
       `,
     });
 
-    const accepted = info.accepted || [];
-    const rejected = info.rejected || [];
+    const accepted = (info.accepted || []).map(a => a.toLowerCase());
+    const rejected = (info.rejected || []).map(a => a.toLowerCase());
+    const assigneeLower = assignee.toLowerCase();
 
-    if (rejected.includes(assignee) || !accepted.includes(assignee)) {
+    if (rejected.includes(assigneeLower) || !accepted.includes(assigneeLower)) {
       throw new Error(`SMTP did not accept the assignment email for ${assignee}.`);
     }
 
@@ -210,10 +211,22 @@ export const sendTaskAssignmentEmail = async (task, assigneeEmail) => {
   } catch (error) {
     console.error("[EmailService] Failed to send email:");
     console.error(error);
-    throw error;
+    throw createEmailError(error);
   }
 };
 
 function isValidEmail(value) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+}
+
+function createEmailError(error) {
+  if (error?.code === "EAUTH") {
+    return new Error("SMTP authentication failed. Check SMTP_USER and the Gmail App Password in Render.");
+  }
+
+  if (error?.code === "ETIMEDOUT" || error?.code === "ESOCKET") {
+    return new Error("SMTP connection failed. Check SMTP_HOST, SMTP_PORT, SMTP_SECURE, and Render networking.");
+  }
+
+  return error instanceof Error ? error : new Error("SMTP email could not be sent.");
 }
