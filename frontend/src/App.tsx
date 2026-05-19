@@ -134,8 +134,12 @@ export default function App() {
     }
     setIsAssigning(true);
     try {
-      await assignTask(assigningTaskId, assigneeEmail.trim());
-      toast.success(`Task assigned to ${assigneeEmail.trim()}! Email sent.`);
+      const assignedTask = await assignTask(assigningTaskId, assigneeEmail.trim());
+      if (assignedTask.emailSent === false) {
+        toast.error(assignedTask.emailError || "Task assigned, but email could not be sent.");
+      } else {
+        toast.success(`Task assigned to ${assigneeEmail.trim()}! Email sent.`);
+      }
       setAssigningTaskId(null);
       await loadTasks();
     } catch (err: any) {

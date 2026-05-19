@@ -3,6 +3,11 @@ import { Task, CreateTaskPayload } from "../types";
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || "https://taskflow-l6b5.onrender.com")
   .replace(/\/$/, "");
 
+export type AssignTaskResult = Task & {
+  emailSent?: boolean;
+  emailError?: string | null;
+};
+
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const response = await fetch(`${API_BASE_URL}/api${path}`, {
     headers: {
@@ -35,7 +40,7 @@ export function createTask(payload: CreateTaskPayload): Promise<Task> {
   });
 }
 
-export function assignTask(id: string, assignee: string): Promise<Task> {
+export function assignTask(id: string, assignee: string): Promise<AssignTaskResult> {
   const normalizedAssignee =
     typeof assignee === "string" ? assignee.trim() : "";
 
