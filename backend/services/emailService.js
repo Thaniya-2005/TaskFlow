@@ -1,5 +1,9 @@
 import nodemailer from 'nodemailer';
 
+// Use SMTP_USER/SMTP_PASS, falling back to EMAIL_USER/EMAIL_PASS if configured that way
+const smtpUser = process.env.SMTP_USER || process.env.EMAIL_USER;
+const smtpPass = process.env.SMTP_PASS || process.env.EMAIL_PASS;
+
 // ─── Transporter ─────────────────────────────────────────────────────────────
 // Explicit host/port is more reliable than `service:'gmail'` on cloud hosts.
 // Port 587 + STARTTLS (secure:false) is the recommended Gmail SMTP config.
@@ -8,8 +12,8 @@ const transporter = nodemailer.createTransport({
   port: parseInt(process.env.SMTP_PORT || '587'),
   secure: process.env.SMTP_SECURE === 'true', // false for 587 (STARTTLS), true for 465 (SSL)
   auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS, // Must be a Gmail App Password, NOT your account password
+    user: smtpUser,
+    pass: smtpPass, // Must be a Gmail App Password, NOT your account password
   },
   // Helps on some cloud providers that have aggressive connection timeouts
   connectionTimeout: 10000, // 10 seconds
@@ -28,8 +32,8 @@ transporter.verify((error, success) => {
 // ─── Send Task Assignment Email ───────────────────────────────────────────────
 export const sendTaskAssignmentEmail = async (task, assigneeEmail) => {
   // Guard: skip gracefully if credentials are missing
-  if (!process.env.SMTP_USER || !process.env.SMTP_PASS) {
-    console.warn('[EmailService] Skipping email — SMTP credentials not configured.');
+  if (!smtpUser || !smtpPass) {
+    console.warn('[EmailService] Skipping email — SMTP credentials not configured (SMTP_USER/EMAIL_USER or SMTP_PASS/EMAIL_PASS missing).');
     return;
   }
 
@@ -51,7 +55,7 @@ export const sendTaskAssignmentEmail = async (task, assigneeEmail) => {
     console.log("[EmailService] Attempting to send email...");
 
     const info = await transporter.sendMail({
-      from: process.env.SMTP_USER,
+      from: smtpUser,
       to: assignee,
       subject: "Task Assigned",
       html: `
