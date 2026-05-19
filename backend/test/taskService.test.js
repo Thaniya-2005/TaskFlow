@@ -26,6 +26,33 @@ describe("taskService", () => {
     assert.ok(assignedTask.tokenExpiresAt, "tokenExpiresAt should be set");
   });
 
+  it("rejects assignment without a valid assignee email", () => {
+    const service = createTaskService();
+    const task = service.createTask({ title: "Fix timeout", dueInHours: 1 });
+
+    assert.throws(
+      () => service.assignTask(task.id, "not-an-email"),
+      /assignee must be a valid email address/
+    );
+    assert.equal(service.getTask(task.id).status, TASK_STATUS.OPEN);
+  });
+
+  it("rolls back an assignment when email delivery fails", () => {
+    const service = createTaskService();
+    const task = service.createTask({ title: "Fix timeout", dueInHours: 1 });
+    const assignedTask = service.assignTask(task.id, "dev@example.com");
+
+    const rolledBackTask = service.rollbackAssignment(
+      assignedTask.id,
+      assignedTask.taskAccessToken
+    );
+
+    assert.equal(rolledBackTask.assignee, null);
+    assert.equal(rolledBackTask.status, TASK_STATUS.OPEN);
+    assert.equal(rolledBackTask.taskAccessToken, null);
+    assert.equal(rolledBackTask.tokenExpiresAt, null);
+  });
+
   it("marks unfinished tasks overdue after the deadline", () => {
     let currentTime = new Date("2026-05-18T10:00:00.000Z");
     const service = createTaskService({ now: () => currentTime });

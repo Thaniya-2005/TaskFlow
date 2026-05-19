@@ -69,6 +69,8 @@ export function createTaskService({ now = () => new Date() } = {}) {
   function assignTask(id, assignee) {
     const task = findTask(id);
     markOverdueTask(task);
+    const normalizedAssignee =
+      typeof assignee === "string" ? assignee.trim() : "";
 
     if (task.status === TASK_STATUS.OVERDUE) {
       throw createHttpError(409, "Cannot assign an overdue task");
@@ -78,10 +80,31 @@ export function createTaskService({ now = () => new Date() } = {}) {
       throw createHttpError(409, "Only open tasks can be assigned");
     }
 
-    task.assignee = assignee || "Backend";
+    if (!isValidEmail(normalizedAssignee)) {
+      throw createHttpError(400, "assignee must be a valid email address");
+    }
+
+    task.assignee = normalizedAssignee;
     task.status = TASK_STATUS.IN_PROGRESS;
     task.taskAccessToken = randomUUID();
     task.tokenExpiresAt = Date.now() + 24 * 60 * 60 * 1000; // Expires in 24 hours
+    return cloneTask(task);
+  }
+
+  function rollbackAssignment(id, taskAccessToken) {
+    const task = findTask(id);
+
+    if (
+      task.status !== TASK_STATUS.IN_PROGRESS ||
+      task.taskAccessToken !== taskAccessToken
+    ) {
+      return cloneTask(task);
+    }
+
+    task.assignee = null;
+    task.status = TASK_STATUS.OPEN;
+    task.taskAccessToken = null;
+    task.tokenExpiresAt = null;
     return cloneTask(task);
   }
 
@@ -157,10 +180,15 @@ export function createTaskService({ now = () => new Date() } = {}) {
     createTask,
     getTask,
     listTasks,
-    markOverdueTasks
+    markOverdueTasks,
+    rollbackAssignment
   };
 }
 
 function cloneTask(task) {
   return { ...task };
+}
+
+function isValidEmail(value) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 }
