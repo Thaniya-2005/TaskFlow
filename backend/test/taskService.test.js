@@ -53,6 +53,26 @@ describe("taskService", () => {
     assert.equal(rolledBackTask.tokenExpiresAt, null);
   });
 
+  it("manually completes open tasks without an email token", () => {
+    const service = createTaskService();
+    const task = service.createTask({ title: "Done from board", dueInHours: 1 });
+
+    const completedTask = service.completeTaskManually(task.id);
+
+    assert.equal(completedTask.status, TASK_STATUS.DONE);
+  });
+
+  it("keeps emailed link completion protected by the assignment token", () => {
+    const service = createTaskService();
+    const task = service.createTask({ title: "Protected task", dueInHours: 1 });
+    const assignedTask = service.assignTask(task.id, "dev@example.com");
+
+    assert.throws(
+      () => service.completeTask(assignedTask.id),
+      /Invalid or missing task access token/
+    );
+  });
+
   it("marks unfinished tasks overdue after the deadline", () => {
     let currentTime = new Date("2026-05-18T10:00:00.000Z");
     const service = createTaskService({ now: () => currentTime });

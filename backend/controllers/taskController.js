@@ -60,7 +60,10 @@ export function completeTask({ taskService }) {
   return (req, res, next) => {
     try {
       const { token } = req.body || {};
-      res.json(taskService.completeTask(req.params.id, token));
+      const task = token
+        ? taskService.completeTask(req.params.id, token)
+        : taskService.completeTaskManually(req.params.id);
+      res.json(task);
     } catch (error) {
       next(error);
     }

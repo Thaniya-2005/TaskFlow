@@ -136,6 +136,24 @@ export function createTaskService({ now = () => new Date() } = {}) {
     return cloneTask(task);
   }
 
+  function completeTaskManually(id) {
+    const task = findTask(id);
+    markOverdueTask(task);
+
+    if (task.status === TASK_STATUS.OVERDUE) {
+      throw createHttpError(409, "Cannot complete an overdue task");
+    }
+
+    if (task.status === TASK_STATUS.DONE) {
+      return cloneTask(task);
+    }
+
+    task.status = TASK_STATUS.DONE;
+    task.taskAccessToken = null;
+    task.tokenExpiresAt = null;
+    return cloneTask(task);
+  }
+
   function completeFromWorker(id) {
     const task = findTask(id);
     markOverdueTask(task);
@@ -177,6 +195,7 @@ export function createTaskService({ now = () => new Date() } = {}) {
     assignTask,
     completeFromWorker,
     completeTask,
+    completeTaskManually,
     createTask,
     getTask,
     listTasks,
