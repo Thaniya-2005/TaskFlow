@@ -1,42 +1,23 @@
-import nodemailer from 'nodemailer';
+import { Resend } from 'resend';
 
-// Use SMTP_USER/SMTP_PASS, falling back to EMAIL_USER/EMAIL_PASS if configured that way
-const smtpUser = process.env.SMTP_USER || process.env.EMAIL_USER;
-const smtpPass = process.env.SMTP_PASS || process.env.EMAIL_PASS;
+// ─── Resend HTTP Email Client ────────────────────────────────────────────────
+// Uses Resend's HTTP API instead of SMTP — works on Render, Vercel, etc.
+// where outbound SMTP (ports 25/465/587) is blocked.
+const RESEND_API_KEY = process.env.RESEND_API_KEY;
+const FROM_EMAIL = process.env.FROM_EMAIL || 'TaskFlow <onboarding@resend.dev>';
 
-// ─── Transporter ─────────────────────────────────────────────────────────────
-// Explicit host/port is more reliable than `service:'gmail'` on cloud hosts.
-// Port 587 + STARTTLS (secure:false) is the recommended Gmail SMTP config.
-const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST || 'smtp.gmail.com',
-  port: parseInt(process.env.SMTP_PORT || '587'),
-  secure: process.env.SMTP_SECURE === 'true', // false for 587 (STARTTLS), true for 465 (SSL)
-  auth: {
-    user: smtpUser,
-    pass: smtpPass, // Must be a Gmail App Password, NOT your account password
-  },
-  // Helps on some cloud providers that have aggressive connection timeouts
-  connectionTimeout: 10000, // 10 seconds
-  greetingTimeout: 10000,
-  socketTimeout: 15000,
-  tls: {
-    rejectUnauthorized: false, // Fix for self-signed cert error on Windows
-  },
-});
-
-transporter.verify((error, success) => {
-  if (error) {
-    console.error("[EmailService] SMTP verification failed:", error);
-  } else {
-    console.log("[EmailService] SMTP server is ready");
-  }
-});
+let resend = null;
+if (RESEND_API_KEY) {
+  resend = new Resend(RESEND_API_KEY);
+  console.log('[EmailService] Resend API configured ✅');
+} else {
+  console.warn('[EmailService] RESEND_API_KEY not set — emails will be skipped.');
+}
 
 // ─── Send Task Assignment Email ───────────────────────────────────────────────
 export const sendTaskAssignmentEmail = async (task, assigneeEmail) => {
-  // Guard: skip gracefully if credentials are missing
-  if (!smtpUser || !smtpPass) {
-    throw new Error('SMTP credentials are not configured (SMTP_USER/EMAIL_USER or SMTP_PASS/EMAIL_PASS missing).');
+  if (!resend) {
+    throw new Error('Email service not configured (RESEND_API_KEY missing).');
   }
 
   const assignee = typeof assigneeEmail === 'string' ? assigneeEmail.trim() : '';
@@ -49,7 +30,6 @@ export const sendTaskAssignmentEmail = async (task, assigneeEmail) => {
   ).replace(/\/$/, '');
 
   const completionLink = `${frontendUrl}/complete-task/${task.id}?token=${task.taskAccessToken}`;
-
   const link = completionLink;
 
   // Format due date nicely
@@ -70,11 +50,11 @@ export const sendTaskAssignmentEmail = async (task, assigneeEmail) => {
   const priorityColor = priorityColors[task.priority] || '#6b7280';
 
   try {
-    console.log("[EmailService] Attempting to send email to:", assignee);
+    console.log('[EmailService] Sending email via Resend to:', assignee);
 
-    const info = await transporter.sendMail({
-      from: `"TaskFlow" <${smtpUser}>`,
-      to: assignee,
+    const { data, error } = await resend.emails.send({
+      from: FROM_EMAIL,
+      to: [assignee],
       subject: `📋 New Task Assigned: ${task.title}`,
       html: `
 <!DOCTYPE html>
@@ -192,41 +172,25 @@ export const sendTaskAssignmentEmail = async (task, assigneeEmail) => {
       `,
     });
 
-    const accepted = (info.accepted || []).map(a => a.toLowerCase());
-    const rejected = (info.rejected || []).map(a => a.toLowerCase());
-    const assigneeLower = assignee.toLowerCase();
-
-    if (rejected.includes(assigneeLower) || !accepted.includes(assigneeLower)) {
-      throw new Error(`SMTP did not accept the assignment email for ${assignee}.`);
+    if (error) {
+      console.error('[EmailService] Resend API error:', error);
+      throw new Error(error.message || 'Resend failed to send email.');
     }
 
-    console.log("[EmailService] Email sent successfully");
-    console.log(info);
+    console.log('[EmailService] Email sent successfully via Resend');
+    console.log('[EmailService] Message ID:', data?.id);
     return {
-      accepted,
-      rejected,
-      messageId: info.messageId,
+      messageId: data?.id,
+      accepted: [assignee],
+      rejected: [],
     };
 
   } catch (error) {
-    console.error("[EmailService] Failed to send email:");
-    console.error(error);
-    throw createEmailError(error);
+    console.error('[EmailService] Failed to send email:', error);
+    throw error;
   }
 };
 
 function isValidEmail(value) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
-}
-
-function createEmailError(error) {
-  if (error?.code === "EAUTH") {
-    return new Error("SMTP authentication failed. Check SMTP_USER and the Gmail App Password in Render.");
-  }
-
-  if (error?.code === "ETIMEDOUT" || error?.code === "ESOCKET") {
-    return new Error("SMTP connection failed. Check SMTP_HOST, SMTP_PORT, SMTP_SECURE, and Render networking.");
-  }
-
-  return error instanceof Error ? error : new Error("SMTP email could not be sent.");
 }
