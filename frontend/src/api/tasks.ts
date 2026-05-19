@@ -36,9 +36,16 @@ export function createTask(payload: CreateTaskPayload): Promise<Task> {
 }
 
 export function assignTask(id: string, assignee: string): Promise<Task> {
+  const normalizedAssignee =
+    typeof assignee === "string" ? assignee.trim() : "";
+
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedAssignee)) {
+    throw new Error("Please enter a valid assignee email before assigning.");
+  }
+
   return request<Task>(`/tasks/${id}/assign`, {
     method: "POST",
-    body: JSON.stringify({ assignee })
+    body: JSON.stringify({ assignee: normalizedAssignee })
   });
 }
 
