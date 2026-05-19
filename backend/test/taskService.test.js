@@ -14,14 +14,16 @@ describe("taskService", () => {
     assert.equal(task.dueAt, "2026-05-19T10:00:00.000Z");
   });
 
-  it("assigns open tasks to Backend and starts progress", () => {
+  it("assigns open tasks to a given email and generates a token", () => {
     const service = createTaskService();
     const task = service.createTask({ title: "Fix timeout", dueInHours: 1 });
 
-    const assignedTask = service.assignTask(task.id);
+    const assignedTask = service.assignTask(task.id, "dev@example.com");
 
-    assert.equal(assignedTask.assignee, "Backend");
+    assert.equal(assignedTask.assignee, "dev@example.com");
     assert.equal(assignedTask.status, TASK_STATUS.IN_PROGRESS);
+    assert.ok(assignedTask.taskAccessToken, "taskAccessToken should be set");
+    assert.ok(assignedTask.tokenExpiresAt, "tokenExpiresAt should be set");
   });
 
   it("marks unfinished tasks overdue after the deadline", () => {

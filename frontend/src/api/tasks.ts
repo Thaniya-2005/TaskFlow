@@ -24,6 +24,10 @@ export function fetchTasks(): Promise<Task[]> {
   return request<Task[]>("/tasks");
 }
 
+export function fetchTaskById(id: string): Promise<Task> {
+  return request<Task>(`/tasks/${id}`);
+}
+
 export function createTask(payload: CreateTaskPayload): Promise<Task> {
   return request<Task>("/tasks", {
     method: "POST",
@@ -31,14 +35,16 @@ export function createTask(payload: CreateTaskPayload): Promise<Task> {
   });
 }
 
-export function assignTask(id: string): Promise<Task> {
+export function assignTask(id: string, assignee: string): Promise<Task> {
   return request<Task>(`/tasks/${id}/assign`, {
-    method: "POST"
+    method: "POST",
+    body: JSON.stringify({ assignee })
   });
 }
 
-export function completeTask(id: string): Promise<Task> {
+export function completeTask(id: string, token?: string): Promise<Task> {
   return request<Task>(`/tasks/${id}/complete`, {
-    method: "POST"
+    method: "POST",
+    body: JSON.stringify({ token })
   });
 }

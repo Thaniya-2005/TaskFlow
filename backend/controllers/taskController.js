@@ -28,10 +28,17 @@ export function getTask({ taskService }) {
   };
 }
 
+import { sendTaskAssignmentEmail } from "../services/emailService.js";
+
 export function assignTask({ taskService, taskWorker }) {
-  return (req, res, next) => {
+  return async (req, res, next) => {
     try {
-      const task = taskService.assignTask(req.params.id);
+      const { assignee } = req.body || {};
+      const task = taskService.assignTask(req.params.id, assignee);
+
+      // Attempt to send email asynchronously (fire-and-forget)
+      sendTaskAssignmentEmail(task, task.assignee);
+
       taskWorker.start(task.id);
       res.json(task);
     } catch (error) {
@@ -43,7 +50,8 @@ export function assignTask({ taskService, taskWorker }) {
 export function completeTask({ taskService }) {
   return (req, res, next) => {
     try {
-      res.json(taskService.completeTask(req.params.id));
+      const { token } = req.body || {};
+      res.json(taskService.completeTask(req.params.id, token));
     } catch (error) {
       next(error);
     }

@@ -7,6 +7,7 @@ export interface Task {
   assignee: string | null;
   createdAt: string;
   dueAt: string;
+  taskAccessToken?: string | null;
 }
 
 export type CreateTaskPayload = Pick<Task, "title" | "description" | "priority"> & {

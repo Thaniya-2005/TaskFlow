@@ -66,7 +66,7 @@ export function createTaskService({ now = () => new Date() } = {}) {
     return cloneTask(task);
   }
 
-  function assignTask(id) {
+  function assignTask(id, assignee) {
     const task = findTask(id);
     markOverdueTask(task);
 
@@ -78,12 +78,14 @@ export function createTaskService({ now = () => new Date() } = {}) {
       throw createHttpError(409, "Only open tasks can be assigned");
     }
 
-    task.assignee = "Assigned & Completed";
+    task.assignee = assignee || "Backend";
     task.status = TASK_STATUS.IN_PROGRESS;
+    task.taskAccessToken = randomUUID();
+    task.tokenExpiresAt = Date.now() + 24 * 60 * 60 * 1000; // Expires in 24 hours
     return cloneTask(task);
   }
 
-  function completeTask(id) {
+  function completeTask(id, token) {
     const task = findTask(id);
     markOverdueTask(task);
 
@@ -95,7 +97,19 @@ export function createTaskService({ now = () => new Date() } = {}) {
       return cloneTask(task);
     }
 
+    // Token validation
+    if (!task.taskAccessToken || task.taskAccessToken !== token) {
+      throw createHttpError(403, "Invalid or missing task access token");
+    }
+
+    // Token expiry validation
+    if (task.tokenExpiresAt && Date.now() > task.tokenExpiresAt) {
+      throw createHttpError(403, "The completion token has expired (valid for 24 hours)");
+    }
+
     task.status = TASK_STATUS.DONE;
+    task.taskAccessToken = null; // Invalidate token after use
+    task.tokenExpiresAt = null;
     return cloneTask(task);
   }
 
