@@ -1,4 +1,5 @@
 import { sendTaskAssignmentEmail } from "../services/emailService.js";
+import { createHttpError } from "../utils/httpErrors.js";
 
 export function listTasks({ taskService }) {
   return (_req, res) => {
@@ -30,27 +31,34 @@ export function getTask({ taskService }) {
   };
 }
 
-export function assignTask({ taskService, taskWorker }) {
+export function assignTask({
+  taskService,
+  taskWorker,
+  emailService = sendTaskAssignmentEmail
+}) {
   return async (req, res, next) => {
     try {
       const { assignee } = req.body || {};
       const task = taskService.assignTask(req.params.id, assignee);
-      let emailSent = true;
-      let emailError = null;
 
       try {
-        await sendTaskAssignmentEmail(task, task.assignee);
+        await emailService(task, task.assignee);
       } catch (error) {
         console.error("[TaskController] Assignment email failed:", error);
-        emailSent = false;
-        emailError = error.message || "Task assigned, but email could not be sent.";
+        taskService.rollbackAssignment(task.id, task.taskAccessToken);
+        return next(
+          createHttpError(
+            502,
+            error.message || "Assignment email could not be sent. Task was left unassigned."
+          )
+        );
       }
 
       taskWorker.start(task.id);
       res.json({
         ...task,
-        emailSent,
-        emailError
+        emailSent: true,
+        emailError: null
       });
     } catch (error) {
       next(error);

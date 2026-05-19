@@ -6,6 +6,7 @@ const SMTP_SECURE = parseBoolean(process.env.SMTP_SECURE, SMTP_PORT === 465);
 const SMTP_USER = process.env.SMTP_USER || process.env.EMAIL_USER;
 const SMTP_PASS = process.env.SMTP_PASS || process.env.EMAIL_PASS;
 const FROM_EMAIL = process.env.FROM_EMAIL || SMTP_USER || "TaskFlow <no-reply@taskflow.local>";
+const EMAIL_SEND_TIMEOUT_MS = Number(process.env.EMAIL_SEND_TIMEOUT_MS || 15000);
 const isProductionRuntime = process.env.NODE_ENV === "production" || process.env.RENDER === "true";
 
 const transporter = createTransporter();
@@ -28,13 +29,17 @@ export const sendTaskAssignmentEmail = async (task, assigneeEmail) => {
   try {
     console.log("[EmailService] Sending SMTP email to:", assignee);
 
-    const info = await transporter.sendMail({
-      from: FROM_EMAIL,
-      to: assignee,
-      subject: `New Task Assigned: ${task.title}`,
-      text: buildTaskAssignmentText({ task, assignee, completionLink, dueDateStr }),
-      html,
-    });
+    const info = await withTimeout(
+      transporter.sendMail({
+        from: FROM_EMAIL,
+        to: assignee,
+        subject: `New Task Assigned: ${task.title}`,
+        text: buildTaskAssignmentText({ task, assignee, completionLink, dueDateStr }),
+        html,
+      }),
+      EMAIL_SEND_TIMEOUT_MS,
+      "SMTP send timed out. Check SMTP settings and provider restrictions."
+    );
 
     console.log("[EmailService] Email sent successfully via SMTP");
     console.log("[EmailService] Message ID:", info.messageId);
@@ -60,6 +65,9 @@ function createTransporter() {
     host: SMTP_HOST,
     port: SMTP_PORT,
     secure: SMTP_SECURE,
+    connectionTimeout: EMAIL_SEND_TIMEOUT_MS,
+    greetingTimeout: EMAIL_SEND_TIMEOUT_MS,
+    socketTimeout: EMAIL_SEND_TIMEOUT_MS,
   };
 
   if (SMTP_USER || SMTP_PASS) {
@@ -246,4 +254,14 @@ function createEmailError(error) {
   }
 
   return error instanceof Error ? error : new Error(message);
+}
+
+function withTimeout(promise, timeoutMs, message) {
+  let timerId;
+
+  const timeoutPromise = new Promise((_, reject) => {
+    timerId = setTimeout(() => reject(new Error(message)), timeoutMs);
+  });
+
+  return Promise.race([promise, timeoutPromise]).finally(() => clearTimeout(timerId));
 }

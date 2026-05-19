@@ -146,6 +146,7 @@ export default function App() {
       await loadTasks();
     } catch (err: any) {
       toast.error(`Error: ${err.message}`);
+      await loadTasks({ quiet: true });
     } finally {
       setIsAssigning(false);
     }
