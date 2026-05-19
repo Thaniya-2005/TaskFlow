@@ -68,11 +68,15 @@ CORS_ORIGIN=http://localhost:5173
 FRONTEND_URL=http://localhost:5173
 WORKER_DELAY_MS=12000
 DEADLINE_CHECK_INTERVAL_MS=5000
-RESEND_API_KEY=re_your_api_key_here
-FROM_EMAIL=TaskFlow <noreply@your-verified-domain.com>
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_SECURE=false
+SMTP_USER=your-email@example.com
+SMTP_PASS=your-app-password
+FROM_EMAIL=TaskFlow <your-email@example.com>
 ```
 
-`onboarding@resend.dev` is only for testing and can only send to the email address on the Resend account. To send assignments to any user, verify a domain in Resend and use an address from that domain in `FROM_EMAIL`.
+TaskFlow sends assignment notifications through SMTP using Nodemailer. For Gmail, use an app password instead of your normal account password. `SMTP_SECURE` should usually be `false` for port `587` and `true` for port `465`.
 
 Frontend variables, stored in `frontend/.env` locally or static-site environment settings:
 
@@ -227,6 +231,8 @@ When a task is assigned, the backend starts a worker timer. The worker tries to 
 4. Start command: `npm start`.
 5. Add environment variables:
    - `CORS_ORIGIN=https://your-frontend-domain`
+   - `FRONTEND_URL=https://your-frontend-domain`
+   - `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, and `FROM_EMAIL`
    - `WORKER_DELAY_MS=12000`
    - `DEADLINE_CHECK_INTERVAL_MS=5000`
 6. Render provides `PORT`, and the app uses `process.env.PORT`.
