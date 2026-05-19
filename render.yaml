@@ -15,15 +15,9 @@ services:
         value: 12000
       - key: DEADLINE_CHECK_INTERVAL_MS
         value: 5000
-      - key: SMTP_HOST
+      - key: RESEND_API_KEY
         sync: false
-      - key: SMTP_PORT
-        sync: false
-      - key: SMTP_SECURE
-        sync: false
-      - key: SMTP_USER
-        sync: false
-      - key: SMTP_PASS
+      - key: FROM_EMAIL
         sync: false
 
   - type: static

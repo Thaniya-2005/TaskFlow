@@ -68,11 +68,8 @@ CORS_ORIGIN=http://localhost:5173
 FRONTEND_URL=http://localhost:5173
 WORKER_DELAY_MS=12000
 DEADLINE_CHECK_INTERVAL_MS=5000
-SMTP_HOST=smtp.gmail.com
-SMTP_PORT=587
-SMTP_SECURE=false
-SMTP_USER=your_email@gmail.com
-SMTP_PASS=your_app_password
+RESEND_API_KEY=re_your_api_key_here
+FROM_EMAIL=TaskFlow <onboarding@resend.dev>
 ```
 
 Frontend variables, stored in `frontend/.env` locally or static-site environment settings:

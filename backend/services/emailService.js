@@ -1,10 +1,10 @@
 import { Resend } from 'resend';
 
 // ─── Resend HTTP Email Client ────────────────────────────────────────────────
-// Uses Resend's HTTP API instead of SMTP — works on Render, Vercel, etc.
-// where outbound SMTP (ports 25/465/587) is blocked.
+// Uses Resend's HTTP API, which works reliably on hosted platforms.
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
 const FROM_EMAIL = process.env.FROM_EMAIL || 'TaskFlow <onboarding@resend.dev>';
+const isProductionRuntime = process.env.NODE_ENV === 'production' || process.env.RENDER === 'true';
 
 let resend = null;
 if (RESEND_API_KEY) {
@@ -25,9 +25,7 @@ export const sendTaskAssignmentEmail = async (task, assigneeEmail) => {
     throw new Error(`Invalid assignee email address: ${assigneeEmail || '<empty>'}`);
   }
 
-  const frontendUrl = (
-    process.env.FRONTEND_URL || process.env.CORS_ORIGIN || 'http://localhost:5173'
-  ).replace(/\/$/, '');
+  const frontendUrl = getFrontendUrl();
 
   const completionLink = `${frontendUrl}/complete-task/${task.id}?token=${task.taskAccessToken}`;
   const link = completionLink;
@@ -187,10 +185,34 @@ export const sendTaskAssignmentEmail = async (task, assigneeEmail) => {
 
   } catch (error) {
     console.error('[EmailService] Failed to send email:', error);
-    throw error;
+    throw createEmailError(error);
   }
 };
 
 function isValidEmail(value) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+}
+
+function getFrontendUrl() {
+  const configuredUrl = process.env.FRONTEND_URL || process.env.PUBLIC_FRONTEND_URL;
+
+  if (configuredUrl) {
+    return configuredUrl.replace(/\/$/, '');
+  }
+
+  if (isProductionRuntime) {
+    throw new Error('FRONTEND_URL is required in production so email links do not point to localhost.');
+  }
+
+  return 'http://localhost:5173';
+}
+
+function createEmailError(error) {
+  const message = error?.message || 'Resend email could not be sent.';
+
+  if (message.toLowerCase().includes('could not be resolved')) {
+    return new Error('Resend API request failed. Check Render networking and RESEND_API_KEY.');
+  }
+
+  return error instanceof Error ? error : new Error(message);
 }

@@ -11,7 +11,6 @@
   },
   "dependencies": {
     "express": "^4.19.2",
-    "nodemailer": "^8.0.7",
     "resend": "^6.12.3"
   },
   "engines": {
